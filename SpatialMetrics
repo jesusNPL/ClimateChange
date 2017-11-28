@@ -2,18 +2,17 @@ library(raster)
 library(dismo)
 
 
-act<-list.files(path="~/Documents/PostDoc/layers/MiddAm_5km_act/", pattern='asc', full.names=TRUE)
+act<-list.files(path="./DIR", pattern='asc', full.names=TRUE)
 varclim<-stack(act)
 
-past1<-list.files(path="~/Documents/PostDoc/layers/MiddAm_lgm_5km//", pattern='asc', full.names=TRUE)
+past1<-list.files(path="./DIR", pattern='asc', full.names=TRUE)
 varclim_lgm<-stack(past1)
 
-past2<-list.files(path="~/Documents/PostDoc/layers/MiddAm_lig_5km//", pattern='asc', full.names=TRUE)
+past2<-list.files(path="./DIR", pattern='asc', full.names=TRUE)
 varclim_lig<-stack(past2)
 
 # Estandarizar las variables climáticas, las del pasado con las media y stdev del presente
 # function to standardized models (0 to 1)
-
 stand.r<-function(raster)
 {
   ras.mean=cellStats(raster,"mean")
@@ -23,7 +22,6 @@ stand.r<-function(raster)
 }
 
 varclim.stand<-stand.r(varclim) # actuales estandarizadas
-plot(varclim.stand[[1]])
 
 mean.act<-cellStats(varclim, "mean")
 stdev.act<-cellStats(varclim, "sd")
@@ -31,21 +29,10 @@ stdev.act<-cellStats(varclim, "sd")
 lgm.clim.stand<-(varclim_lgm-mean.act)/stdev.act # lgm estandarizadas de acuerdo al clima actual
 lig.clim.stand<-(varclim_lig-mean.act)/stdev.act # lgm estandarizadas de acuerdo al clima actual
 
-par(mfrow=c(3,1))
-plot(varclim.stand[[1]])
-plot(lgm.clim.stand[[1]])
-plot(lig.clim.stand[[1]])
-
 # local metrics (see Garcia et al. 2014 Science)
-
 euc.dist <- function(x1, x2) sqrt(sum((x1 - x2) ^ 2))
 euc.dist.lgm<-euc.dist(varclim.stand, lgm.clim.stand)
 euc.dist.lig<-euc.dist(varclim.stand, lig.clim.stand)
-
-quartz()
-plot(euc.dist.lgm, main="Standardized local anomalies from LGM")
-quartz()
-plot(euc.dist.lig, main="Standardized local anomalies from LIG")
 
 # local metrics only temperature
 temp.act<-varclim[[c(1,2,3,12,13,14,15,16,17,18,19)]]
@@ -62,13 +49,6 @@ lig.temp.stand<-(temp.lig-mean.temp.act)/stdev.temp.act # lgm estandarizadas de 
 euc.dist.temp.lgm<-euc.dist(temp.act.stand, lgm.temp.stand)
 euc.dist.temp.lig<-euc.dist(temp.act.stand, lig.temp.stand)
 
-quartz()
-plot(euc.dist.temp.lgm, main="Stand. local anomalies in temp from LGM")
-quartz()
-plot(euc.dist.temp.lig, main="Stand. local anomalies in temp from LIG")
-
-writeRaster(euc.dist.temp.lgm, filename="temp.anom.lgm.asc", format="ascii")
-
 # local metrics only precipitation
 prec.act<-varclim[[c(4,5,6,7,8,9,10,11)]]
 prec.act.stand<-stand.r(prec.act)
@@ -84,29 +64,15 @@ lig.prec.stand<-(prec.lig-mean.prec.act)/stdev.prec.act # lgm estandarizadas de 
 euc.dist.prec.lgm<-euc.dist(prec.act.stand, lgm.prec.stand)
 euc.dist.prec.lig<-euc.dist(prec.act.stand, lig.prec.stand)
 
-quartz()
-plot(euc.dist.prec.lgm, main="Stand. local anomalies in prec from LGM")
-quartz()
-plot(euc.dist.prec.lig, main="Stand. local anomalies in prec from LIG")
-
-writeRaster(euc.dist.prec.lgm, filename="prec.anom.lgm.asc", format="ascii")
-
-
 # Local anomalies for each variable
-
 euc.dist.lgm.all<-sqrt((varclim.stand-lgm.clim.stand)^2)
-
 euc.dist.lig.all<-sqrt((varclim.stand-lig.clim.stand)^2)
-
-plot(euc.dist.lgm.all)
-plot(euc.dist.lig.all)
 
 # Novel climates using MESS (Elith et al. 2010)
 # extract points to each mask 
 bios.pts<-rasterToPoints(varclim[[1]],fun=NULL, spatial=TRUE)
 bios.lgm<-extract(lgm.clim.stand, bios.pts)
 bios.lgm<-data.frame(coordinates(bios.pts),bios.lgm)
-
 bios.lig<-extract(lig.clim.stand, bios.pts)
 bios.lig<-data.frame(coordinates(bios.pts),bios.lig)
 
@@ -115,20 +81,11 @@ mess.lgm <- mask(mess.lgm, lgm.clim.stand[[1]])
 min<-0
 mess.lgm.rec <- reclassify(mess.lgm, c(-Inf,min,0, min,Inf,1))
 
-quartz()
-plot(mess.lgm.rec, main="MESS from LGM")
-
-writeRaster(mess.lgm, filename="mess.lgm.asc", format="ascii", overwrite=TRUE)
-
-
-
 mess.lig<-mess(varclim.stand, bios.lig[,c(-1:-2)], full=FALSE)
 mess.lig <- mask(mess.lig, lig.clim.stand[[1]])
 min<-0
 mess.lig.rec <- reclassify(mess.lig, c(-Inf,min,0, min,Inf,1))
 
-quartz()
-plot(mess.lig.rec, main="MESS from LIG")
 
 # Novel climates using MESS (Elith et al. 2010)
 # extract points to each mask 
@@ -151,16 +108,10 @@ mess.temp.lgm <- mask(mess.temp.lgm, temp.act.stand[[1]])
 min<-0
 mess.temp.lgm.rec <- reclassify(mess.temp.lgm, c(-Inf,min,0, min,Inf,1))
 
-
-writeRaster(mess.temp.lgm, filename="mess.temp.lgm.asc", format="ascii", overwrite=TRUE)
-
-
 mess.prec.lgm<-mess(prec.act.stand, bios.prec.lgm[,c(-1:-2)], full=FALSE)
 mess.prec.lgm <- mask(mess.prec.lgm, prec.act.stand[[1]])
 min<-0
 mess.prec.lgm.rec <- reclassify(mess.prec.lgm, c(-Inf,min,0, min,Inf,1))
-
-writeRaster(mess.prec.lgm, filename="mess.prec.lgm.asc", format="ascii", overwrite=TRUE)
 
 mess.temp.lig<-mess(temp.act.stand, bios.temp.lig[,c(-1:-2)], full=FALSE)
 mess.temp.lig <- mask(mess.temp.lig, temp.act.stand[[1]])
@@ -171,16 +122,6 @@ mess.prec.lig<-mess(prec.act.stand, bios.prec.lig[,c(-1:-2)], full=FALSE)
 mess.prec.lig <- mask(mess.prec.lig, prec.act.stand[[1]])
 min<-0
 mess.prec.lig.rec <- reclassify(mess.prec.lig, c(-Inf,min,0, min,Inf,1))
-
-
-
-pdf("MESS temp prec from LGM and LIG.pdf")
-par(mfrow=c(2,2))
-plot(mess.temp.lgm.rec, main="MESS temp from LGM")
-plot(mess.prec.lgm.rec, main="MESS prec from LGM")
-plot(mess.temp.lig.rec, main="MESS temp from LIG")
-plot(mess.prec.lig.rec, main="MESS prec from LIG")
-dev.off()
 
 ### Novelty Mesgaran et al. 2014
 bios_pts<-as.data.frame(varclim[[1]], row.names=NULL, 
@@ -208,18 +149,8 @@ NT2 <- read.asciigrid(fname=pro[1])
 NT2@data <- nt2
 
 NT2rast <- raster(NT2)
-quartz()
-plot(NT2rast, col=rainbow(100), main="NT2 from LIG") # plot Mahalanobis distances between climatic surfaces t0 vs. t1
-
-writeRaster(NT2rast, filename="nt2.asc", format="ascii", overwrite=TRUE)
-
-save.image("ClimaticChangeMetrics.RData")
-
 
 # climatic velocity (Sandel et al. 2011)
-
-
-
 #define temporal
 time=21000
 
@@ -230,7 +161,6 @@ bio1.lgm<-varclim_lgm[[1]]
 
 bio12<-prec.act[[1]]
 bio12.lgm<-varclim_lgm[[4]]
-
 
 # Sandel et al. 2011's method time=21000 from LGM 
 clim_vel<-function(p2,p1) {
@@ -245,22 +175,8 @@ clim_vel<-function(p2,p1) {
 
 
 vel_temp<-clim_vel(p2=bio1.lgm,p1=bio1)
-plot(vel_temp)
-
 vel_prec<-clim_vel(p2=bio12.lgm,p1=bio12)
-plot(vel_prec)
-
-writeRaster(vel_temp, filename="vel_temp.asc", format="ascii", overwrite=TRUE)
-
-writeRaster(vel_prec, filename="vel_prec.asc", format="ascii", overwrite=TRUE)
-
-
 
 ####3
 euc.dist.all<-sqrt((varclim-varclim_lgm)^2)
-
-par(mfrow=c(1,1))
-plot(euc.dist.bio1)
-plot(euc.dist.bio1.v2)
-plot(euc.dist.all)
 
